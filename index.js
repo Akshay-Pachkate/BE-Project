@@ -62,6 +62,9 @@ app.post('/login', validate(userSchema), async (req, res) => {
 
 });
 
+app.get('/', (req, res) => {
+    res.send('Hello World');
+});
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
