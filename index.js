@@ -19,7 +19,6 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 app.use(express.json());
 app.use(cors());
 
-console.log(GEMINI_API_KEY);
 
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY); // Replace with your actual API key
