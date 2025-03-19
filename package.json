@@ -11,6 +11,8 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@google/generative-ai": "^0.24.0",
+    "axios": "^1.8.3",
     "bcrypt": "^5.1.1",
     "be-project": "file:",
     "cors": "^2.8.5",

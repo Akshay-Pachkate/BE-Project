@@ -1,8 +1,10 @@
 require('dotenv').config(); 
 const express = require('express');
 const cors = require('cors');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const bcrypt = require('bcrypt');
 var jwt = require('jsonwebtoken');
+const axios = require('axios');
 const userSchema = require('./types');
 const validate = require('./middlewares/validate');
 const User = require('./db');
@@ -12,10 +14,16 @@ const PORT = process.env.PORT || 3000;
 const SALT = bcrypt.genSaltSync(10);
 const JWT_SECRET = process.env.JWT_SECRET;
 const app = express();
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 app.use(express.json());
 app.use(cors());
 
+console.log(GEMINI_API_KEY);
+
+
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY); // Replace with your actual API key
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 app.post('/register', validate(userSchema), async (req, res) => {
 
@@ -60,46 +68,49 @@ app.post('/login', validate(userSchema), async (req, res) => {
 
 });
 
-const GEMINI_API_URL = "https://api.gemini.com/v1/completions"; // Replace with actual Gemini API endpoint
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Replace with your API key
 
-app.post('/evaluate', async (req, res) => {
+
+app.post("/evaluate", async (req, res) => {
     const { article, summary } = req.body;
+    
 
+    // Validate input
     if (!article || !summary) {
-        return res.status(400).json({ error: "Both 'article' and 'summary' are required in the request body." });
+        return res.status(400).json({
+            error: "Both 'article' and 'summary' are required in the request body.",
+        });
     }
 
     try {
-        const prompt = `You are an expert in text summarization evaluation. Evaluate the provided article and its summary and give a score on a scale of 1 to 100. Here are the inputs:
+        // Construct the prompt
+        const prompt = `
+            You are an expert in text summarization evaluation. 
+            Evaluate the provided article and its summary. 
+            Give a score between 1 and 100 based on coherence, fluency, relevance, and accuracy. 
+
+            Article: ${article}
+            Summary: ${summary}
+            just give the score nothing else
+        `;
+
         
-        Article: ${article}
-        Summary: ${summary}`;
 
-        const response = await axios.post(
-            GEMINI_API_URL,
-            {
-                model: "your-model-id", // Replace with the specific Gemini model ID, if needed
-                prompt: prompt,
-                max_tokens: 100, // Adjust based on expected response size
-            },
-            {
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${GEMINI_API_KEY}`, // Authorization header
-                },
-            }
-        );
+        // Call the model
+        const response = await model.generateContent(prompt);
+        
 
-        // Assuming the API returns a score in the `choices` array
-        const score = response.data.choices[0].text.trim();
+        const score = response.response.text(); // Extract the generated score
+
+        console.log("Score:", score);
 
         res.status(200).json({ score });
-    } catch (error) {
-        console.error("Error evaluating text:", error.response?.data || error.message);
-        res.status(500).json({ error: "Failed to evaluate text. Please try again later." });
-    }
-});
+        } catch (error) {
+        console.error("Error evaluating text:", error.message || error);
+        res.status(500).json({
+            error: "Failed to evaluate the text. Please try again later.",
+        });
+        }
+    });
 
 
 app.get('/', (req, res) => {
